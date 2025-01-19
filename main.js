@@ -1112,8 +1112,25 @@ function createCollectionViewer() {
         throw new Error('Invalid file format');
       }
 
-      // Import each card
-      const importPromises = data.pogeflex.cards.map(async (card) => {
+      // Get existing cards to check for duplicates
+      const existingCards = await getAllCards();
+      
+      // Filter out exact duplicates and count them
+      const duplicates = [];
+      const cardsToImport = data.pogeflex.cards.filter(importCard => {
+        const isDuplicate = existingCards.some(existingCard => 
+          existingCard.name === importCard.name &&
+          existingCard.description === importCard.description &&
+          existingCard.imageUrl === importCard.imageUrl
+        );
+        if (isDuplicate) {
+          duplicates.push(importCard.name);
+        }
+        return !isDuplicate;
+      });
+
+      // Import non-duplicate cards
+      const importPromises = cardsToImport.map(async (card) => {
         try {
           await saveCard(card);
         } catch (error) {
@@ -1128,7 +1145,12 @@ function createCollectionViewer() {
       grid.innerHTML = '';
       await showCollection();
 
-      showToast('Collection imported successfully!');
+      // Show appropriate toast message
+      if (duplicates.length > 0) {
+        showToast(`Imported ${cardsToImport.length} new cards. Skipped ${duplicates.length} duplicate(s).`);
+      } else {
+        showToast(`Successfully imported ${cardsToImport.length} new cards!`);
+      }
     } catch (error) {
       console.error('Error importing collection:', error);
       showToast('Failed to import collection: ' + error.message, true);
