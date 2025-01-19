@@ -1112,32 +1112,33 @@ function createCollectionViewer() {
         throw new Error('Invalid file format');
       }
 
+      // Show import options dialog
+      const importChoice = await showImportDialog(data.pogeflex.cards.length);
+      if (importChoice === null) {
+        fileInput.value = '';
+        return; // User cancelled
+      }
+
       // Get existing cards to check for duplicates
       const existingCards = await getAllCards();
+      let cardsToImport;
       
-      // Filter out exact duplicates and count them
-      const duplicates = [];
-      const cardsToImport = data.pogeflex.cards.filter(importCard => {
-        const isDuplicate = existingCards.some(existingCard => 
-          existingCard.name === importCard.name &&
-          existingCard.description === importCard.description &&
-          existingCard.imageUrl === importCard.imageUrl
+      if (importChoice === 'skip') {
+        // Filter out exact duplicates
+        cardsToImport = data.pogeflex.cards.filter(importCard => 
+          !existingCards.some(existingCard => 
+            existingCard.name === importCard.name &&
+            existingCard.description === importCard.description &&
+            existingCard.imageUrl === importCard.imageUrl
+          )
         );
-        if (isDuplicate) {
-          duplicates.push(importCard.name);
-        }
-        return !isDuplicate;
-      });
+      } else {
+        // Import all cards
+        cardsToImport = data.pogeflex.cards;
+      }
 
-      // Import non-duplicate cards
-      const importPromises = cardsToImport.map(async (card) => {
-        try {
-          await saveCard(card);
-        } catch (error) {
-          console.error('Error importing card:', error);
-        }
-      });
-
+      // Import the cards
+      const importPromises = cardsToImport.map(card => saveCard(card));
       await Promise.all(importPromises);
       
       // Refresh the collection display
@@ -1145,11 +1146,12 @@ function createCollectionViewer() {
       grid.innerHTML = '';
       await showCollection();
 
-      // Show appropriate toast message
-      if (duplicates.length > 0) {
-        showToast(`Imported ${cardsToImport.length} new cards. Skipped ${duplicates.length} duplicate(s).`);
+      // Show success message
+      const skippedCount = data.pogeflex.cards.length - cardsToImport.length;
+      if (importChoice === 'skip' && skippedCount > 0) {
+        showToast(`Imported ${cardsToImport.length} cards. Skipped ${skippedCount} duplicate(s).`);
       } else {
-        showToast(`Successfully imported ${cardsToImport.length} new cards!`);
+        showToast(`Successfully imported ${cardsToImport.length} cards!`);
       }
     } catch (error) {
       console.error('Error importing collection:', error);
@@ -1190,6 +1192,45 @@ async function showConfirmDialog(cardData) {
   });
 
   return result;
+}
+
+function showImportDialog(totalCards) {
+  return new Promise((resolve) => {
+    const dialog = document.createElement('div');
+    dialog.className = 'import-dialog';
+    dialog.innerHTML = `
+      <h3>Import Collection</h3>
+      <p>About to import ${totalCards} cards.</p>
+      <p>How would you like to handle potential duplicates?</p>
+      <div class="import-options">
+        <label>
+          <input type="radio" name="duplicate-handling" value="skip" checked>
+          Skip exact duplicates
+        </label>
+        <label>
+          <input type="radio" name="duplicate-handling" value="allow">
+          Allow all duplicates
+        </label>
+      </div>
+      <div class="import-dialog-buttons">
+        <button class="cancel">Cancel</button>
+        <button class="confirm">Import</button>
+      </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    dialog.querySelector('.cancel').addEventListener('click', () => {
+      dialog.remove();
+      resolve(null);
+    });
+
+    dialog.querySelector('.confirm').addEventListener('click', () => {
+      const selectedOption = dialog.querySelector('input[name="duplicate-handling"]:checked').value;
+      dialog.remove();
+      resolve(selectedOption);
+    });
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
