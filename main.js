@@ -963,8 +963,56 @@ function setupPrintButton() {
   });
 }
 
-function setupExportButton() {
-  const exportBtn = document.getElementById('exportBtn');
+function createCollectionViewer() {
+  const viewer = document.createElement('div');
+  viewer.className = 'collection-viewer hidden';
+  viewer.innerHTML = `
+    <div class="collection-header">
+      <h2>Your Pogeflex Collection</h2>
+      <div class="collection-header-buttons">
+        <button class="export-btn" title="Export Collection">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+          </svg>
+        </button>
+        <button class="delete-mode-toggle" title="Toggle Delete Mode">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12z"/>
+          </svg>
+        </button>
+        <button class="close-collection">×</button>
+      </div>
+    </div>
+    <div class="collection-tabs">
+      <button class="type-tab active" data-type="all">
+        <span>ALL</span>
+      </button>
+    </div>
+    <div class="collection-grid"></div>
+  `;
+  document.body.appendChild(viewer);
+
+  // Add event listeners for the buttons
+  const closeBtn = viewer.querySelector('.close-collection');
+  const deleteToggle = viewer.querySelector('.delete-mode-toggle');
+  const exportBtn = viewer.querySelector('.export-btn');
+  let deleteMode = false;
+
+  closeBtn.addEventListener('click', () => {
+    viewer.classList.add('hidden');
+    deleteMode = false;
+    deleteToggle.classList.remove('active');
+    const cards = viewer.querySelectorAll('.mini-card');
+    cards.forEach(card => card.classList.remove('delete-mode'));
+  });
+
+  deleteToggle.addEventListener('click', () => {
+    deleteMode = !deleteMode;
+    deleteToggle.classList.toggle('active');
+    const cards = viewer.querySelectorAll('.mini-card');
+    cards.forEach(card => card.classList.toggle('delete-mode'));
+  });
+
   exportBtn.addEventListener('click', async () => {
     try {
       const cards = await getAllCards();
@@ -993,6 +1041,10 @@ function setupExportButton() {
       showToast('Failed to export collection', true);
     }
   });
+
+  // ... rest of the existing createCollectionViewer code ...
+
+  return viewer;
 }
 
 async function showConfirmDialog(cardData) {
@@ -1022,70 +1074,6 @@ async function showConfirmDialog(cardData) {
   });
 }
 
-function createCollectionViewer() {
-  const viewer = document.createElement('div');
-  viewer.className = 'collection-viewer hidden';
-  viewer.innerHTML = `
-    <div class="collection-header">
-      <h2>Your Pogeflex Collection</h2>
-      <button class="close-collection">×</button>
-      <button class="delete-mode-toggle" title="Toggle Delete Mode">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12z"/>
-        </svg>
-      </button>
-    </div>
-    <div class="collection-tabs">
-      <button class="type-tab active" data-type="all">
-        <span>ALL</span>
-      </button>
-    </div>
-    <div class="collection-grid"></div>
-  `;
-  document.body.appendChild(viewer);
-
-  const closeBtn = viewer.querySelector('.close-collection');
-  const deleteToggle = viewer.querySelector('.delete-mode-toggle');
-  let deleteMode = false;
-
-  closeBtn.addEventListener('click', () => {
-    viewer.classList.add('hidden');
-    deleteMode = false;
-    deleteToggle.classList.remove('active');
-    const cards = viewer.querySelectorAll('.mini-card');
-    cards.forEach(card => card.classList.remove('delete-mode'));
-  });
-
-  deleteToggle.addEventListener('click', () => {
-    deleteMode = !deleteMode;
-    deleteToggle.classList.toggle('active');
-    const cards = viewer.querySelectorAll('.mini-card');
-    cards.forEach(card => card.classList.toggle('delete-mode'));
-  });
-
-  viewer.addEventListener('click', async (e) => {
-    const miniCard = e.target.closest('.mini-card');
-    if (!miniCard) return;
-
-    if (deleteMode) {
-      const cardData = miniCard.cardData;
-      const confirmed = await showConfirmDialog(cardData);
-      if (confirmed) {
-        await deleteCard(parseInt(miniCard.dataset.cardId));
-        await showCollection();
-      }
-    } else {
-      // Regular card click behavior
-      loadCardToMain(miniCard.cardData);
-      viewer.classList.add('hidden');
-      deleteMode = false;
-      deleteToggle.classList.remove('active');
-    }
-  });
-
-  return viewer;
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   initDB();
   const initialCard = document.querySelector('.card');
@@ -1097,7 +1085,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   setupPrintButton();
-  setupExportButton();
 
   // Add collection button
   const collectionBtn = document.createElement('button');

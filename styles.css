@@ -650,6 +650,12 @@ body {
   margin-bottom: 0;
 }
 
+.collection-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .collection-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -1477,40 +1483,46 @@ body {
 }
 
 .export-btn {
-  position: fixed;
-  bottom: 160px;
-  right: 90px;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #9C27B0, #8E24AA);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: none;
   border: none;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.2s ease;
   display: flex;
   justify-content: center;
   align-items: center;
-  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.2);
-  z-index: 9999;
+  margin-right: 8px;
 }
 
 .export-btn svg {
-  width: 24px;
-  height: 24px;
-  fill: white;
+  width: 20px;
+  height: 20px;
+  fill: #666;
+  transition: all 0.2s ease;
 }
 
 .export-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(156, 39, 176, 0.3);
+  background: rgba(156, 39, 176, 0.1);
 }
 
-.export-btn:active {
-  transform: translateY(0);
+.export-btn:hover svg {
+  fill: #9C27B0;
 }
 
 @media (max-width: 480px) {
+  .collection-header {
+    padding: 8px 15px;
+  }
+  
   .export-btn {
-    bottom: 230px;
+    width: 32px;
+    height: 32px;
+  }
+  
+  .export-btn svg {
+    width: 18px;
+    height: 18px;
   }
 }
