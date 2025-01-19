@@ -968,13 +968,21 @@ function createCollectionViewer() {
   viewer.className = 'collection-viewer hidden';
   viewer.innerHTML = `
     <div class="collection-header">
-      <h2>Your Pogeflex Collection</h2>
-      <div class="collection-header-buttons">
+      <div class="collection-header-title">
+        <h2>Your PoGeFlex Collection</h2>
+        <button class="import-btn" title="Import Collection">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" transform="rotate(180, 12, 12)"/>
+          </svg>
+        </button>
         <button class="export-btn" title="Export Collection">
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
           </svg>
         </button>
+        <input type="file" class="hidden-file-input" accept=".json">
+      </div>
+      <div class="collection-header-buttons">
         <button class="delete-mode-toggle" title="Toggle Delete Mode">
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12z"/>
@@ -996,6 +1004,8 @@ function createCollectionViewer() {
   const closeBtn = viewer.querySelector('.close-collection');
   const deleteToggle = viewer.querySelector('.delete-mode-toggle');
   const exportBtn = viewer.querySelector('.export-btn');
+  const importBtn = viewer.querySelector('.import-btn');
+  const fileInput = viewer.querySelector('.hidden-file-input');
   let deleteMode = false;
 
   closeBtn.addEventListener('click', () => {
@@ -1024,7 +1034,6 @@ function createCollectionViewer() {
         }
       };
 
-      // Create blob and download
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1042,7 +1051,50 @@ function createCollectionViewer() {
     }
   });
 
-  // ... rest of the existing createCollectionViewer code ...
+  importBtn.addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      // Validate the imported data structure
+      if (!data.pogeflex || !Array.isArray(data.pogeflex.cards)) {
+        throw new Error('Invalid file format');
+      }
+
+      // Import each card
+      const importPromises = data.pogeflex.cards.map(async (card) => {
+        try {
+          await saveCard(card);
+        } catch (error) {
+          console.error('Error importing card:', error);
+        }
+      });
+
+      await Promise.all(importPromises);
+      
+      // Refresh the collection display
+      const grid = viewer.querySelector('.collection-grid');
+      grid.innerHTML = '';
+      await showCollection();
+
+      showToast('Collection imported successfully!');
+    } catch (error) {
+      console.error('Error importing collection:', error);
+      showToast('Failed to import collection: ' + error.message, true);
+    }
+
+    // Reset the file input
+    fileInput.value = '';
+  });
+
+  // ... rest of existing createCollectionViewer code ...
 
   return viewer;
 }
