@@ -430,7 +430,7 @@ function getTypeIcon(type) {
     
     'Ground': `<svg viewBox="0 0 512 512"><path fill="currentColor" d="M384 256H128l128-224 128 224zm-256 0l128 224 128-224H128zm256-32l-128-224L128 224h256z"/></svg>`,
     
-    'Flying': `<svg viewBox="0 0 512 512"><path fill="currentColor" d="M256 32l-96 160h192L256 32zm0 384l-96 96 96 96 96-96L256 32zm0-256l-64 64-64 64 64 64 64-64z"/></svg>`,
+    'Flying': `<svg viewBox="0 0 512 512"><path fill="currentColor" d="M256 32L128 160l128 128 128-128L256 32zm0 384l-96 96 96 96 96-96L256 32zm0-256l-64 64-64 64 64 64 64-64z"/></svg>`,
     
     'Psychic': `<svg viewBox="0 0 512 512"><path fill="currentColor" d="M256 96c-88.4 0-160 71.6-160 160s71.6 160 160 160 160-71.6 160-160S344.4 96 256 96zm0 256c-53 0-96-43-96-96s43-96 96-96 96 43 96 96-43 96-96 96zm48-96c0 26.5-21.5 48-48 48s-48-21.5-48-48 21.5-48 48-48 48 21.5 48 48z"/></svg>`,
     
@@ -1020,7 +1020,51 @@ function createCollectionViewer() {
     deleteMode = !deleteMode;
     deleteToggle.classList.toggle('active');
     const cards = viewer.querySelectorAll('.mini-card');
-    cards.forEach(card => card.classList.toggle('delete-mode'));
+    cards.forEach(card => {
+      card.classList.toggle('delete-mode');
+      
+      // Remove existing click handlers
+      const newCard = card.cloneNode(true);
+      card.parentNode.replaceChild(newCard, card);
+      
+      // Add appropriate click handler based on mode
+      if (deleteMode) {
+        newCard.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const cardData = newCard.cardData;
+          if (await showConfirmDialog(cardData)) {
+            try {
+              await deleteCard(cardData.id);
+              newCard.remove();
+              showToast(`${cardData.name} was released successfully!`);
+            } catch (error) {
+              console.error('Error deleting card:', error);
+              showToast('Failed to release Pogemon', true);
+            }
+          }
+        });
+      } else {
+        newCard.addEventListener('click', async (e) => {
+          const palaceButton = e.target.closest('.palace-button');
+          
+          if (palaceButton) {
+            e.stopPropagation(); // Prevent card load
+            try {
+              await showPalaceDialog(newCard.cardData);
+            } catch (error) {
+              console.error('Failed to send to PoGePalace:', error);
+            }
+            return;
+          }
+
+          loadCardToMain(newCard.cardData);
+          viewer.classList.add('hidden');
+        });
+      }
+      
+      // Preserve the cardData
+      newCard.cardData = card.cardData;
+    });
   });
 
   exportBtn.addEventListener('click', async () => {
@@ -1094,8 +1138,6 @@ function createCollectionViewer() {
     fileInput.value = '';
   });
 
-  // ... rest of existing createCollectionViewer code ...
-
   return viewer;
 }
 
@@ -1113,7 +1155,7 @@ async function showConfirmDialog(cardData) {
 
   document.body.appendChild(dialog);
 
-  return new Promise((resolve) => {
+  const result = await new Promise((resolve) => {
     dialog.querySelector('.cancel').addEventListener('click', () => {
       dialog.remove();
       resolve(false);
@@ -1124,6 +1166,8 @@ async function showConfirmDialog(cardData) {
       resolve(true);
     });
   });
+
+  return result;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
